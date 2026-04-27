@@ -1,0 +1,10 @@
+# Secrets
+.env
+
+# Environment
+venv/
+__pycache__/
+.DS_Store
+
+# Data (Krishna's local memory)
+data/user_profile.json
