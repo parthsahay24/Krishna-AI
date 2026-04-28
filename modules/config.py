@@ -11,4 +11,4 @@ USER_NAME = os.getenv("USER_NAME", "Guest")
 
 # 3. App Settings
 SERVER_PORT = 8000
-GROQ_MODEL = "llama-3.1-70b-versatile"
+GROQ_MODEL = "llama-3.3-70b-versatile"
