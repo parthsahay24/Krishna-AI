@@ -43,6 +43,11 @@ REMEMBER: You're a guide, mentor, companion - not a servant. ...
 
 """
 
+NAME_EXTRACTION_INSTRUCTION = """
+If the user tells you their name for the first time, you MUST end your response with exactly this format: [SAVE_NAME: name_here]
+Example: 'Sunder naam hai! [SAVE_NAME: Parth]'
+"""
+
 
 
 

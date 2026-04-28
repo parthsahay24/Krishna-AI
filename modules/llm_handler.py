@@ -1,7 +1,8 @@
+import re
 from groq import Groq
 from . import config
-from . import prompts
 from . import memory_manager
+from . import prompts
 
 
 client = Groq(api_key=config.GROQ_API_KEY)
@@ -15,13 +16,16 @@ def get_krishna_response(user_text):
     if not user_name:
         system_instructions = (
             prompts.KRISHNA_SYSTEM_PROMPT + 
-            "\nCRITICAL: You do not know the user's name yet. "
-            "Politely ask for their name in your first response."
+            "\nCRITICAL: You do not know the user's name yet. Politely ask for it. "
+            "If they tell you their name, you MUST end your response with: [SAVE_NAME: name_here]"
         )
     else:
-        system_instructions = prompts.KRISHNA_SYSTEM_PROMPT.format(user_name=user_name)
+        # ADDED THIS: A clear instruction at the TOP so it doesn't hallucinate
+        name_instruction = f"\nCRITICAL: The user's name is {user_name}. ALWAYS address them as {user_name}."
+        system_instructions = prompts.KRISHNA_SYSTEM_PROMPT.format(user_name=user_name) + name_instruction
 
-    # 3. Call Groq
+
+    # 3. Call the Brain - Groq
     response = client.chat.completions.create(
         model=config.GROQ_MODEL,
         messages=[
@@ -30,12 +34,20 @@ def get_krishna_response(user_text):
         ]
     )
     
-    krishna_text = response.choices[0].message.content
+    # Ensure krishna_text is a string, even if the AI returns nothing
+    krishna_text = response.choices[0].message.content or ""
 
-    # 4. Professional "Learning" Trick: 
-    # If Krishna just learned a name, we extract it and save it.
-    # (For now, we'll assume the first thing the user says is their name)
-    if not user_name and len(user_text.split()) <= 2:
-        memory_manager.save_user_name(user_text)
 
+    # 4. The "Learning" Phase (AI Extraction)
+    if not user_name and "[SAVE_NAME:" in krishna_text:
+        # Regex: Find the text inside [SAVE_NAME: ...]
+        match = re.search(r"\[SAVE_NAME:\s*(.*?)\]", krishna_text)
+        if match:
+            extracted_name = match.group(1).strip()
+            # Clean the name (remove punctuation if AI included any)
+            extracted_name = re.sub(r'[^\w\s]', '', extracted_name)
+            
+            memory_manager.save_user_name(extracted_name)
+            
+    krishna_text = re.sub(r"\[.*?\]", "", krishna_text).strip()
     return krishna_text
