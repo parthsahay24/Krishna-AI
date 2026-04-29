@@ -14,7 +14,17 @@ def get_krishna_response(user_text):
 
     # 2. Logic: If we have no name, Krishna must be in "Discovery Mode"
     if not user_name:
-        system_instructions = prompts.KRISHNA_SYSTEM_PROMPT + prompts.NAME_EXTRACTION_INSTRUCTION
+        neutral_name = "friend"
+        unknown_name_instruction = (
+            "\nCRITICAL: The user's real name is currently unknown. "
+            "Do NOT guess or invent their real name. "
+            f"If you need to address them before learning it, use '{neutral_name}' or avoid using a name."
+        )
+        system_instructions = (
+            prompts.KRISHNA_SYSTEM_PROMPT.format(user_name=neutral_name)
+            + prompts.NAME_EXTRACTION_INSTRUCTION
+            + unknown_name_instruction
+        )
     else:
         name_instruction = f"\nCRITICAL: The user's name is {user_name}. ALWAYS address them as {user_name}."
         system_instructions = prompts.KRISHNA_SYSTEM_PROMPT.format(user_name=user_name) + name_instruction
