@@ -33,7 +33,7 @@ def get_krishna_response(user_text):
     krishna_text = response.choices[0].message.content or ""
 
 
-        # 4. The "Learning" Phase
+    # 4. The "Learning" Phase
     if not user_name and "[SAVE_NAME:" in krishna_text:
         match = re.search(r"\[SAVE_NAME:\s*(.*?)\]", krishna_text)
         if match:
