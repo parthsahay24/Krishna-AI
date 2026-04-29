@@ -14,13 +14,8 @@ def get_krishna_response(user_text):
 
     # 2. Logic: If we have no name, Krishna must be in "Discovery Mode"
     if not user_name:
-        system_instructions = (
-            prompts.KRISHNA_SYSTEM_PROMPT + 
-            "\nCRITICAL: You do not know the user's name yet. Politely ask for it. "
-            "If they tell you their name, you MUST end your response with: [SAVE_NAME: name_here]"
-        )
+        system_instructions = prompts.KRISHNA_SYSTEM_PROMPT + prompts.NAME_EXTRACTION_INSTRUCTION
     else:
-        # ADDED THIS: A clear instruction at the TOP so it doesn't hallucinate
         name_instruction = f"\nCRITICAL: The user's name is {user_name}. ALWAYS address them as {user_name}."
         system_instructions = prompts.KRISHNA_SYSTEM_PROMPT.format(user_name=user_name) + name_instruction
 
@@ -38,16 +33,16 @@ def get_krishna_response(user_text):
     krishna_text = response.choices[0].message.content or ""
 
 
-    # 4. The "Learning" Phase (AI Extraction)
+        # 4. The "Learning" Phase
     if not user_name and "[SAVE_NAME:" in krishna_text:
-        # Regex: Find the text inside [SAVE_NAME: ...]
         match = re.search(r"\[SAVE_NAME:\s*(.*?)\]", krishna_text)
         if match:
-            extracted_name = match.group(1).strip()
-            # Clean the name (remove punctuation if AI included any)
-            extracted_name = re.sub(r'[^\w\s]', '', extracted_name)
-            
+            extracted_name = re.sub(r'[^\w\s]', '', match.group(1).strip())
             memory_manager.save_user_name(extracted_name)
-            
-    krishna_text = re.sub(r"\[.*?\]", "", krishna_text).strip()
-    return krishna_text
+    
+    # 5. UNIVERSAL CLEANUP (Move these outside all 'if' blocks)
+    # This ensures the user NEVER sees a robot tag
+    krishna_text = re.sub(r"\[SAVE_NAME:.*?\]", "", krishna_text)
+    krishna_text = re.sub(r"\[waiting for name\]", "", krishna_text)
+    
+    return krishna_text.strip()
