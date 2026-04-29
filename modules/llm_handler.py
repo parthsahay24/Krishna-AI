@@ -37,8 +37,10 @@ def get_krishna_response(user_text):
     if not user_name and "[SAVE_NAME:" in krishna_text:
         match = re.search(r"\[SAVE_NAME:\s*(.*?)\]", krishna_text)
         if match:
-            extracted_name = re.sub(r'[^\w\s]', '', match.group(1).strip())
-            memory_manager.save_user_name(extracted_name)
+            extracted_name = re.sub(r"[^\w\s]", "", match.group(1))
+            extracted_name = re.sub(r"\s+", " ", extracted_name).strip()
+            if extracted_name:
+                memory_manager.save_user_name(extracted_name)
     
     # 5. UNIVERSAL CLEANUP (Move these outside all 'if' blocks)
     # This ensures the user NEVER sees a robot tag
