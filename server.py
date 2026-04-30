@@ -1,27 +1,56 @@
-from fastapi import FastAPI
-from modules import config, llm_handler, memory_manager
+import base64
+import os
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from modules import config, llm_handler, sarvam_handler
 
 app = FastAPI(title="Krishna AI")
 
-# ROUTE 1: Status Check (Uses the static config name)
-@app.get("/")
-def home():
-    return {
-        "status": "Krishna is online", 
-        "user_in_env": config.USER_NAME,
-        "message": f"Namaste!" 
-    }
+#stablishing phone line
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    # 1. Open the Phone Line
+    await websocket.accept()
+    print("✅ Connection Established: Krishna is on the line.")
+    
+    try:
+        while True:
+            # 2. Receive Audio Data from the Browser
+            # The browser will send the user's voice as raw bytes.
+            audio_data = await websocket.receive_bytes()
 
-# ROUTE 2: The Actual Chat (Uses the dynamic learned name)
-@app.get("/chat")
-def chat(message: str):
-    """
-    This is where the magic happens. 
-    Krishna will check his memory to see if he knows you.
-    """
-    response = llm_handler.get_krishna_response(message)
-    return {"krishna": response}
+            # 3. Save the audio to a temp file so the 'Ears' can read it
+            temp_filename = "temp_user_voice.wav"
+            with open(temp_filename, "wb") as f:
+                f.write(audio_data)
 
+            # 4. EAR PHASE: Translate voice to text
+            user_text = await sarvam_handler.speech_to_text(temp_filename)
+            
+            if user_text:
+                print(f"User said: {user_text}")
+                # 5. BRAIN PHASE: Get Krishna's Hinglish response
+                krishna_text = llm_handler.get_krishna_response(user_text)
+                print(f"Krishna responds: {krishna_text}")
+                # 6. VOICE PHASE: Translate Krishna's response to audio
+                krishna_audio = await sarvam_handler.text_to_speech(krishna_text)
+
+                if krishna_audio:
+                    # Sending the audio back through the pipe
+                    # 1. Turn audio bytes into a string
+                    audio_base64 = base64.b64encode(krishna_audio).decode('utf-8')
+                    # 2. Send both text and audio back
+                    await websocket.send_json({
+                        "text": krishna_text,
+                        "audio": audio_base64
+                    })
+    except WebSocketDisconnect:
+        print("❌ Connection Closed: The user hung up.")
+    except Exception as e:
+        print(f"⚠️ Error: {str(e)}")
+    finally:
+        # Cleanup: Remove the temp audio file
+        if os.path.exists("temp_user_voice.wav"):
+            os.remove("temp_user_voice.wav")
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="127.0.0.1", port=config.SERVER_PORT, reload=True)
+    uvicorn.run("server:app", host="0.0.0.0", port=config.SERVER_PORT, reload=True)

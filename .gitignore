@@ -3,7 +3,15 @@
 
 # Environment
 venv/
+env/
 __pycache__/
+*.pyc
+.DS_Store
+
+data/
+user_profile.json
+
+
 .DS_Store
 
 
