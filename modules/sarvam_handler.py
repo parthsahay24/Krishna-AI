@@ -54,29 +54,32 @@ async def speech_to_text(audio_file_path: str):
     """
     Translates your voice (audio file) into text that the Brain can read.
     """
+    #Defensive check for API key
+    if not config.SARVAM_API_KEY or config.SARVAM_API_KEY == "your_sarvam_key_here":
+        print("⚠️ Warning: SARVAM_API_KEY is missing or a placeholder!")
+        return ""
+    
     headers = {
         "api-subscription-key": config.SARVAM_API_KEY
     }
-    
-    # We send the audio file as 'multipart/form-data'
-    # 'saaras:v3' is the smartest ear model Sarvam has.
-    files = {
-        "file": open(audio_file_path, "rb")
-    }
-    data = {
-        "model": "saaras:v3"
-    }
+    try:
+        # We send the audio file as 'multipart/form-data'
+        # 'saaras:v3' is the smartest ear model Sarvam has.
+        with open(audio_file_path, "rb") as audio_file:
+            files = {"file": audio_file}
+            data = {"model": "saaras:v3"}
 
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(STT_URL, headers=headers, files=files, data=data)
-            
-            if response.status_code == 200:
-                # Returns the transcription (what you said)
-                return response.json().get("transcript", "")
-            else:
-                print(f"❌ STT Error: {response.status_code}")
-                return ""
-        except Exception as e:
-            print(f"❌ Ear Engine Error: {str(e)}")
-            return ""
+            async with httpx.AsyncClient() as client:
+                # 3. THE FIX: Adding timeout=15.0 solves Issue #3
+                response = await client.post(STT_URL, headers=headers, files=files, data=data, timeout=15.0)
+
+                if response.status_code == 200:
+                    # Returns the transcription (what you said)
+                    return response.json().get("transcript", "")
+                else:
+                    print(f"❌ STT Error: {response.status_code}")
+                    return ""
+    
+    except Exception as e:
+        print(f"❌ Ear Engine Error: {str(e)}")
+        return ""
