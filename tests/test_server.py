@@ -2,8 +2,16 @@ import asyncio
 import websockets
 import json
 import base64
-
+from pathlib import Path
 async def test_krishna():
+
+    # This logic finds the file relative to THIS script's folder
+    current_dir = Path(__file__).parent
+    audio_file = current_dir.parent / "krishna_voice_test.wav"
+    
+    if not audio_file.exists():
+        print(f"❌ Error: Could not find {audio_file}. Make sure you generated it!")
+        return
     uri = "ws://localhost:8000/ws"
     
     try:
@@ -11,8 +19,7 @@ async def test_krishna():
             print("🔗 Connected to Krishna's Phone Line!")
             
             # 1. Prepare a "Voice Message" to send
-            # We use the file we generated earlier
-            audio_file = "krishna_voice_test.wav"
+            # We use the 'audio_file'
             with open(audio_file, "rb") as f:
                 audio_bytes = f.read()
             

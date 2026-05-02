@@ -1,7 +1,15 @@
 import asyncio
 from modules import sarvam_handler
+from pathlib import Path
 
 async def main():
+    # This logic finds the file relative to THIS script's folder
+    current_dir = Path(__file__).parent
+    audio_file = current_dir.parent / "krishna_voice_test.wav"
+    
+    if not audio_file.exists():
+        print(f"❌ Error: Could not find {audio_file}. Make sure you generated it!")
+        return
     print("🔊 Sending text to Krishna's voice box...")
     
     # We are testing Krishna's signature Hinglish tone
