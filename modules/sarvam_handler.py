@@ -56,7 +56,7 @@ async def speech_to_text(audio_file_path: str):
     """
     #Defensive check for API key
     if not config.SARVAM_API_KEY or config.SARVAM_API_KEY == "your_sarvam_key_here":
-        print("⚠️ Warning: SARVAM_API_KEY is missing!")
+        print("⚠️ Warning: SARVAM_API_KEY is missing or a placeholder!")
         return ""
     
     headers = {

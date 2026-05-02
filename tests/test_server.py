@@ -7,7 +7,7 @@ async def test_krishna():
 
     # This logic finds the file relative to THIS script's folder
     current_dir = Path(__file__).parent
-    audio_file = current_dir.parent / "krishna_voice_test.wav"
+    audio_file = current_dir / "krishna_voice_test.wav"
     
     if not audio_file.exists():
         print(f"❌ Error: Could not find {audio_file}. Make sure you generated it!")
