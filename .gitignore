@@ -11,6 +11,12 @@ __pycache__/
 data/
 user_profile.json
 
+# Databases
+*.db
+*.sqlite3
+
+# Audio Temp Files
+temp_*.wav
 
 .DS_Store
 
