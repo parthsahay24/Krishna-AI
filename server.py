@@ -31,11 +31,12 @@ async def websocket_endpoint(websocket: WebSocket):
     
     try:
         while True:
-             # --- START THE TIMER HERE ---
-            start_time = time.perf_counter()
-            # 2. Receive Audio Data from the Browser
+             # 2. Receive Audio Data from the Browser
             # The browser will send the user's voice as raw bytes.
             audio_data = await websocket.receive_bytes()
+            # --- START THE TIMER HERE ---
+            start_time = time.perf_counter()
+           
             # PROFESSOR'S SECURITY ADDITION: Check file size
             if len(audio_data) > MAX_AUDIO_SIZE:
                 await websocket.send_json({
@@ -117,8 +118,7 @@ async def websocket_endpoint(websocket: WebSocket):
         except Exception as e:
             print(f"⚠️ Analytics final cleanup failed: {str(e)}")
 
-        if os.path.exists("temp_user_voice.wav"):
-            os.remove("temp_user_voice.wav")
+
             
 if __name__ == "__main__":
     import uvicorn
