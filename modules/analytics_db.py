@@ -8,27 +8,29 @@ def init_db():
     """Initializes the database and creates the necessary tables if they don't exist."""
     os.makedirs("data", exist_ok=True)
     with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
         cursor = conn.cursor()
         
-        # 1. Conversations Table
+        # 1. Sessions Table (Must be created first for Foreign Key reference)
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS conversations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id TEXT,
-                timestamp DATETIME,
-                user_input TEXT,
-                bot_response TEXT,
-                latency_ms REAL
+            CREATE TABLE IF NOT EXISTS sessions (
+                session_id TEXT PRIMARY KEY NOT NULL,
+                start_time DATETIME NOT NULL,
+                end_time DATETIME,
+                status TEXT NOT NULL
             )
         ''')
         
-        # 2. Sessions Table
+        # 2. Conversations Table (With Foreign Key link)
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS sessions (
-                session_id TEXT PRIMARY KEY,
-                start_time DATETIME,
-                end_time DATETIME,
-                status TEXT
+            CREATE TABLE IF NOT EXISTS conversations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                timestamp DATETIME NOT NULL,
+                user_input TEXT,
+                bot_response TEXT,
+                latency_ms REAL,
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
             )
         ''')
         
@@ -36,8 +38,8 @@ def init_db():
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS errors (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp DATETIME,
-                error_message TEXT,
+                timestamp DATETIME NOT NULL,
+                error_message TEXT NOT NULL,
                 error_type TEXT,
                 context TEXT
             )
@@ -46,6 +48,7 @@ def init_db():
 def log_conversation(session_id, user_input, bot_response, latency_ms):
     """Inserts a new conversation record."""
     with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
         cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO conversations (session_id, timestamp, user_input, bot_response, latency_ms)
@@ -55,6 +58,7 @@ def log_conversation(session_id, user_input, bot_response, latency_ms):
 def log_session_start(session_id):
     """Logs the start of a WebSocket connection."""
     with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
         cursor = conn.cursor()
         cursor.execute('''
             INSERT OR IGNORE INTO sessions (session_id, start_time, status)
@@ -64,6 +68,7 @@ def log_session_start(session_id):
 def log_session_end(session_id):
     """Logs the end of a WebSocket connection."""
     with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
         cursor = conn.cursor()
         cursor.execute('''
             UPDATE sessions SET end_time = ?, status = ? WHERE session_id = ?
@@ -72,6 +77,7 @@ def log_session_end(session_id):
 def log_error(timestamp, error_message, error_type, context):
     """Logs an error to the database."""
     with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
         cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO errors (timestamp, error_message, error_type, context)
