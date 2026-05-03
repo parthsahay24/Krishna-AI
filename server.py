@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 import time
 from modules import analytics_db
@@ -21,12 +22,17 @@ async def status():
 async def websocket_endpoint(websocket: WebSocket):
     # 1. Open the Phone Line
     await websocket.accept()
+
+    # --- HELPER FOR NON-BLOCKING DB CALLS ---
+    async def _safe_analytics_call(fn, *args):
+        try:
+            await asyncio.to_thread(fn, *args)
+        except Exception as e:
+            print(f"⚠️ Analytics Logging Error: {e}")
+
     # Generate a unique ID for this specific session
     session_id = str(uuid.uuid4())
-    try:
-        analytics_db.log_session_start(session_id)
-    except Exception as e:
-        print(f"⚠️ Analytics session start logging failed: {str(e)}")
+    await _safe_analytics_call(analytics_db.log_session_start, session_id)
     print("✅ Connection Established: Krishna is on the line.")
     
     try:
@@ -70,10 +76,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     krishna_text = llm_handler.get_krishna_response(user_text)
                     print(f"Krishna responds: {krishna_text}")
                     latency_ms = (time.perf_counter() - start_time) * 1000
-                    try:
-                        analytics_db.log_conversation(session_id, user_text, krishna_text, latency_ms)
-                    except Exception as e:
-                        print(f"⚠️ Analytics Logging Error: {e}")
+                    await _safe_analytics_call(analytics_db.log_conversation, session_id, user_text, krishna_text, latency_ms)
 
                     # 6. VOICE PHASE: Translate Krishna's response to audio
                     krishna_audio = await sarvam_handler.text_to_speech(krishna_text)
@@ -98,7 +101,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "error": "empty_speech"
                     })
                      # Log the failure for analysis
-                    analytics_db.log_error(datetime.now(timezone.utc), "Empty speech detected", "STT_FAILURE", f"Session: {session_id}")
+                    await _safe_analytics_call(analytics_db.log_error, datetime.now(timezone.utc), "Empty speech detected", "STT_FAILURE", f"Session: {session_id}")
 
             except Exception as e:
                 print(f"⚠️ Loop Error: {str(e)}")
@@ -113,10 +116,7 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"⚠️ Error: {str(e)}")
     finally:
-        try:
-            analytics_db.log_session_end(session_id)
-        except Exception as e:
-            print(f"⚠️ Analytics final cleanup failed: {str(e)}")
+        await _safe_analytics_call(analytics_db.log_session_end, session_id)
 
 
             
