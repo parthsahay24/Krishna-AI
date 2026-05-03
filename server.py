@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import time
 from modules import analytics_db
 import base64
@@ -98,7 +98,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "error": "empty_speech"
                     })
                      # Log the failure for analysis
-                    analytics_db.log_error(datetime.now(), "Empty speech detected", "STT_FAILURE", f"Session: {session_id}")
+                    analytics_db.log_error(datetime.now(timezone.utc), "Empty speech detected", "STT_FAILURE", f"Session: {session_id}")
 
             except Exception as e:
                 print(f"⚠️ Loop Error: {str(e)}")

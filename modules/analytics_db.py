@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 DB_PATH = "data/krishna_analytics.db"
 
@@ -50,7 +50,7 @@ def log_conversation(session_id, user_input, bot_response, latency_ms):
         cursor.execute('''
             INSERT INTO conversations (session_id, timestamp, user_input, bot_response, latency_ms)
             VALUES (?, ?, ?, ?, ?)
-        ''', (session_id, datetime.now(), user_input, bot_response, latency_ms))
+        ''', (session_id, datetime.now(timezone.utc), user_input, bot_response, latency_ms))
 
 def log_session_start(session_id):
     """Logs the start of a WebSocket connection."""
@@ -59,7 +59,7 @@ def log_session_start(session_id):
         cursor.execute('''
             INSERT OR IGNORE INTO sessions (session_id, start_time, status)
             VALUES (?, ?, ?)
-        ''', (session_id, datetime.now(), 'active'))
+        ''', (session_id, datetime.now(timezone.utc), 'active'))
 
 def log_session_end(session_id):
     """Logs the end of a WebSocket connection."""
@@ -67,7 +67,7 @@ def log_session_end(session_id):
         cursor = conn.cursor()
         cursor.execute('''
             UPDATE sessions SET end_time = ?, status = ? WHERE session_id = ?
-        ''', (datetime.now(), 'completed', session_id))
+        ''', (datetime.now(timezone.utc), 'completed', session_id))
 
 def log_error(timestamp, error_message, error_type, context):
     """Logs an error to the database."""
