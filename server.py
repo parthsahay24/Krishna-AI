@@ -1,4 +1,5 @@
-from datetime import datetime
+import asyncio
+from datetime import datetime, timezone
 import time
 from modules import analytics_db
 import base64
@@ -21,21 +22,27 @@ async def status():
 async def websocket_endpoint(websocket: WebSocket):
     # 1. Open the Phone Line
     await websocket.accept()
+
+    # --- HELPER FOR NON-BLOCKING DB CALLS ---
+    async def _safe_analytics_call(fn, *args):
+        try:
+            await asyncio.to_thread(fn, *args)
+        except Exception as e:
+            print(f"⚠️ Analytics Logging Error: {e}")
+
     # Generate a unique ID for this specific session
     session_id = str(uuid.uuid4())
-    try:
-        analytics_db.log_session_start(session_id)
-    except Exception as e:
-        print(f"⚠️ Analytics session start logging failed: {str(e)}")
+    await _safe_analytics_call(analytics_db.log_session_start, session_id)
     print("✅ Connection Established: Krishna is on the line.")
     
     try:
         while True:
-             # --- START THE TIMER HERE ---
-            start_time = time.perf_counter()
-            # 2. Receive Audio Data from the Browser
+             # 2. Receive Audio Data from the Browser
             # The browser will send the user's voice as raw bytes.
             audio_data = await websocket.receive_bytes()
+            # --- START THE TIMER HERE ---
+            start_time = time.perf_counter()
+           
             # PROFESSOR'S SECURITY ADDITION: Check file size
             if len(audio_data) > MAX_AUDIO_SIZE:
                 await websocket.send_json({
@@ -68,6 +75,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     # 5. BRAIN PHASE: Get Krishna's Hinglish response
                     krishna_text = llm_handler.get_krishna_response(user_text)
                     print(f"Krishna responds: {krishna_text}")
+                    latency_ms = (time.perf_counter() - start_time) * 1000
+                    await _safe_analytics_call(analytics_db.log_conversation, session_id, user_text, krishna_text, latency_ms)
+
                     # 6. VOICE PHASE: Translate Krishna's response to audio
                     krishna_audio = await sarvam_handler.text_to_speech(krishna_text)
 
@@ -80,9 +90,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             "text": krishna_text,
                             "audio": audio_base64
                         })
-                         # Record successful interaction
-                        latency_ms = (time.perf_counter() - start_time) * 1000
-                        analytics_db.log_conversation(session_id, user_text, krishna_text, latency_ms)
+                        
 
                 else:
                     # Don't leave the user hanging!
@@ -93,7 +101,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         "error": "empty_speech"
                     })
                      # Log the failure for analysis
-                    analytics_db.log_error(datetime.now(), "Empty speech detected", "STT_FAILURE", f"Session: {session_id}")
+                    await _safe_analytics_call(analytics_db.log_error, datetime.now(timezone.utc), "Empty speech detected", "STT_FAILURE", f"Session: {session_id}")
 
             except Exception as e:
                 print(f"⚠️ Loop Error: {str(e)}")
@@ -103,15 +111,15 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         print("❌ Connection Closed: The user hung up.")
-
-        analytics_db.log_session_end(session_id)
+        
 
     except Exception as e:
         print(f"⚠️ Error: {str(e)}")
     finally:
-        # Cleanup: Remove the temp audio file
-        if os.path.exists("temp_user_voice.wav"):
-            os.remove("temp_user_voice.wav")
+        await _safe_analytics_call(analytics_db.log_session_end, session_id)
+
+
+            
 if __name__ == "__main__":
     import uvicorn
     # Initialize the database before the server starts
