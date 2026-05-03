@@ -23,7 +23,10 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     # Generate a unique ID for this specific session
     session_id = str(uuid.uuid4())
-    analytics_db.log_session_start(session_id)
+    try:
+        analytics_db.log_session_start(session_id)
+    except Exception as e:
+        print(f"⚠️ Analytics session start logging failed: {str(e)}")
     print("✅ Connection Established: Krishna is on the line.")
     
     try:
