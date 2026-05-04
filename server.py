@@ -75,8 +75,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     # 5. BRAIN PHASE: Get Krishna's Hinglish response
                     krishna_text = llm_handler.get_krishna_response(user_text)
                     print(f"Krishna responds: {krishna_text}")
-                    latency_ms = (time.perf_counter() - start_time) * 1000
-                    await _safe_analytics_call(analytics_db.log_conversation, session_id, user_text, krishna_text, latency_ms)
+                    llm_latency_ms = (time.perf_counter() - start_time) * 1000
+                    await _safe_analytics_call(analytics_db.log_conversation, session_id, user_text, krishna_text, llm_latency_ms)
 
                     # 6. VOICE PHASE: Translate Krishna's response to audio
                     krishna_audio = await sarvam_handler.text_to_speech(krishna_text)
@@ -90,6 +90,26 @@ async def websocket_endpoint(websocket: WebSocket):
                             "text": krishna_text,
                             "audio": audio_base64
                         })
+                        # Total end-to-end latency
+                        total_latency = (time.perf_counter() - start_time) * 1000
+                        print(f"⚡ Total End-to-End Latency: {total_latency:.2f}ms")
+
+                    else:
+                        # Log error if TTS fails but text is still delivered
+                        await _safe_analytics_call(
+                            analytics_db.log_error, 
+                            datetime.now(timezone.utc), 
+                            "TTS Failed - Text generated but audio not delivered", 
+                            "VOICE_FAILURE", 
+                            f"Session: {session_id}"
+                        )
+                        # Still send the text response for better UX
+                        await websocket.send_json({
+                            "text": krishna_text,
+                            "audio": None,
+                            "status": "tts_failed"
+                        })
+
                         
 
                 else:
